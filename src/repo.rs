@@ -43,7 +43,7 @@ pub fn add_log(connection: &Connection, release_id: i32, date: String) -> Result
 
 pub fn list_log(connection: &Connection) -> Result<Vec<Log>, Error> {
     let mut stmt = connection.prepare(
-        "SELECT log.date, release.name, artist.name FROM log JOIN release ON log.release_id = release.id JOIN artist ON release.artistname = artist.name",
+        "SELECT log.date, release.name, artist.name FROM log JOIN release ON log.release_id = release.id JOIN artist ON release.artistname = artist.name ORDER BY log.date",
     )?;
     let rows = stmt.query_map([], |row| {
         Ok(Log {
