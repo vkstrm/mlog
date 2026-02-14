@@ -62,7 +62,7 @@ module commands {
 
   # List all logs
   export def "mlog log" [] {
-    musiklog log list | from json
+    musiklog log list | from json | each {|| { date: $in.date, release: $in.release, artist: $in.artist }}
   }
 
   # Add a new log for a release

@@ -43,13 +43,14 @@ pub fn add_log(connection: &Connection, release_id: i32, date: String) -> Result
 
 pub fn list_log(connection: &Connection) -> Result<Vec<Log>, Error> {
     let mut stmt = connection.prepare(
-        "SELECT log.date, release.name, artist.name FROM log JOIN release ON log.release_id = release.id JOIN artist ON release.artistname = artist.name ORDER BY log.date",
+        "SELECT log.id, log.date, release.name, artist.name FROM log JOIN release ON log.release_id = release.id JOIN artist ON release.artistname = artist.name ORDER BY log.date",
     )?;
     let rows = stmt.query_map([], |row| {
         Ok(Log {
-            date: row.get(0)?,
-            release: row.get(1)?,
-            artist: row.get(2)?,
+            id: row.get(0)?,
+            date: row.get(1)?,
+            release: row.get(2)?,
+            artist: row.get(3)?,
         })
     })?;
     let mut log: Vec<Log> = vec![];
@@ -57,6 +58,29 @@ pub fn list_log(connection: &Connection) -> Result<Vec<Log>, Error> {
         log.push(r?);
     }
     Ok(log)
+}
+
+pub fn get_log(connection: &Connection, id: i32) -> Result<Option<Log>, Error> {
+    let mut stmt = connection.prepare("SELECT log.id, log.date, release.name, artist.name FROM log JOIN release ON log.release_id = release.id JOIN artist ON release.artistname = artist.name ORDER BY log.date AND log.id = (?1)")?;
+    let mut rows = stmt.query_map([id], |row| {
+        Ok(Log {
+            id: row.get(0)?,
+            date: row.get(1)?,
+            release: row.get(2)?,
+            artist: row.get(3)?,
+        })
+    })?;
+    if let Some(row) = rows.next() {
+        Ok(Some(row?))
+    } else {
+        Ok(None)
+    }
+}
+
+pub fn delete_log(connection: &Connection, id: i32) -> Result<(), Error> {
+    let mut stmt = connection.prepare("DELETE FROM log WHERE id = (?1)")?;
+    stmt.execute(params![id])?;
+    Ok(())
 }
 
 pub fn releases_for_artist(connection: &Connection, artist: String) -> Result<Vec<Release>, Error> {

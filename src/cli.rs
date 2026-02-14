@@ -126,4 +126,9 @@ pub enum LogCommands {
     },
     #[command(about = "List logs")]
     List,
+    #[command(about = "Delete a log")]
+    Delete {
+        #[arg(help = "Id of the log to delete")]
+        id: i32,
+    },
 }

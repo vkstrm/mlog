@@ -18,6 +18,7 @@ pub struct Release {
 #[derive(Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Log {
+    pub id: i32,
     #[serde(with = "date_serializer")]
     pub date: String,
     pub release: String,

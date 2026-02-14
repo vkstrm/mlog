@@ -1,7 +1,9 @@
 use std::io::stdin;
 
 use crate::error;
-use crate::repo::{add_artist, add_release, all_releases, artists, releases_for_artist};
+use crate::repo::{
+    add_artist, add_release, all_releases, artists, delete_log, get_log, releases_for_artist,
+};
 use crate::{
     cli::{ArtistCommands, Cli, Commands, DateInput, LogCommands, ReleaseCommands},
     error::Error,
@@ -44,6 +46,25 @@ pub fn log(command: LogCommands, connection: Connection) -> Result<(), Error> {
             let logs = list_log(&connection)?;
             print(&logs)?
         }
+        LogCommands::Delete { id } => {
+            if let Some(log) = get_log(&connection, id)? {
+                eprint!(
+                    "Really delete log?\n {}\n[y/n]: ",
+                    serde_json::to_string_pretty(&log).unwrap()
+                );
+                let mut buffer = String::new();
+                stdin().read_line(&mut buffer)?;
+                if buffer.trim().to_lowercase() != "y" {
+                    println!("OK, aborting delete");
+                    return Ok(());
+                }
+                delete_log(&connection, id)?;
+                println!("Deleted log");
+            } else {
+                println!("No log found");
+                return Ok(());
+            }
+        }
     }
     Ok(())
 }
@@ -85,10 +106,10 @@ pub fn handle_artist(command: ArtistCommands, connection: Connection) -> Result<
 fn pick_release(releases: &[Release]) -> Result<&Release, Error> {
     let mut index = 1;
     for release in releases {
-        println!("{}. {}", index, release.artist);
+        eprintln!("{}. {}", index, release.artist);
         index += 1;
     }
-    println!("Pick a release by the number:");
+    eprintln!("Pick a release by the number:");
     let mut buffer = String::new();
     stdin().read_line(&mut buffer)?;
     let choice = match buffer.trim().parse::<usize>() {
