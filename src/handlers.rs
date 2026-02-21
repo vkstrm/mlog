@@ -1,8 +1,11 @@
+use std::collections::HashMap;
 use std::io::stdin;
 
+use crate::cli::SummaryCommands;
 use crate::error;
 use crate::repo::{
-    add_artist, add_release, all_releases, artists, delete_log, get_log, releases_for_artist,
+    add_artist, add_release, all_releases, artists, delete_log, get_log, list_log_month,
+    releases_for_artist,
 };
 use crate::{
     cli::{ArtistCommands, Cli, Commands, DateInput, LogCommands, ReleaseCommands},
@@ -12,19 +15,20 @@ use crate::{
 };
 use chrono::{DateTime, Local, TimeZone, Timelike};
 use rusqlite::Connection;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 pub fn handle_input(cli: Cli, connection: Connection) -> Result<(), Error> {
     match cli.command {
         Some(Commands::Artist { command }) => handle_artist(command, connection)?,
         Some(Commands::Release { command }) => handle_release(command, connection)?,
-        Some(Commands::Log { command }) => log(command, connection)?,
+        Some(Commands::Log { command }) => handle_log(command, connection)?,
+        Some(Commands::Summary { command }) => handle_summary(command, connection)?,
         None => {}
     };
     Ok(())
 }
 
-pub fn log(command: LogCommands, connection: Connection) -> Result<(), Error> {
+pub fn handle_log(command: LogCommands, connection: Connection) -> Result<(), Error> {
     match command {
         LogCommands::Add { release, date } => {
             let date = get_date(date);
@@ -64,6 +68,84 @@ pub fn log(command: LogCommands, connection: Connection) -> Result<(), Error> {
                 println!("No log found");
                 return Ok(());
             }
+        }
+    }
+    Ok(())
+}
+
+#[derive(Serialize, Deserialize)]
+struct TopEntry {
+    name: String,
+    count: usize,
+}
+
+#[derive(Serialize, Deserialize)]
+struct Summary {
+    #[serde(rename = "totalLogs")]
+    total_logs: usize,
+    #[serde(rename = "totalArtists")]
+    total_artists: usize,
+    #[serde(rename = "uniqueReleases")]
+    unique_releases: usize,
+    #[serde(rename = "topArtists")]
+    artist_top: Vec<TopEntry>,
+    #[serde(rename = "topReleases")]
+    release_top: Vec<TopEntry>,
+}
+
+pub fn handle_summary(command: SummaryCommands, connection: Connection) -> Result<(), Error> {
+    match command {
+        SummaryCommands::Month { month } => {
+            let display_top_count = 5;
+            let logs = list_log_month(&connection, month.value())?;
+            let total_logs_count = logs.len();
+
+            let mut artists: HashMap<String, Vec<String>> = HashMap::new();
+            let mut releases: HashMap<String, usize> = HashMap::new();
+            logs.into_iter().for_each(|log| {
+                match releases.get(&log.release) {
+                    Some(cur) => releases.insert(log.release.to_string(), cur + 1),
+                    None => releases.insert(log.release.to_string(), 1),
+                };
+
+                match artists.get_mut(&log.artist) {
+                    Some(v) => v.push(log.release),
+                    None => drop(artists.insert(log.artist.to_string(), vec![log.release])),
+                }
+            });
+
+            let total_artist_count = artists.keys().len();
+            let unique_releases_count = releases.len();
+
+            let mut artist_entries: Vec<TopEntry> = artists
+                .iter()
+                .map(|(k, v)| TopEntry {
+                    name: k.to_string(),
+                    count: v.len(),
+                })
+                .collect();
+            artist_entries.sort_by(|a, b| a.count.cmp(&b.count).reverse());
+
+            let mut release_entries: Vec<TopEntry> = releases
+                .iter()
+                .map(|(k, v)| TopEntry {
+                    name: k.to_string(),
+                    count: v.to_owned(),
+                })
+                .collect();
+            release_entries.sort_by(|a, b| a.count.cmp(&b.count).reverse());
+
+            let summary = Summary {
+                total_logs: total_logs_count,
+                total_artists: total_artist_count,
+                artist_top: artist_entries.into_iter().take(display_top_count).collect(),
+                release_top: release_entries
+                    .into_iter()
+                    .take(display_top_count)
+                    .collect(),
+                unique_releases: unique_releases_count,
+            };
+            print(&summary)?;
         }
     }
     Ok(())

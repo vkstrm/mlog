@@ -60,6 +60,30 @@ pub fn list_log(connection: &Connection) -> Result<Vec<Log>, Error> {
     Ok(log)
 }
 
+pub fn list_log_month(connection: &Connection, month: i32) -> Result<Vec<Log>, Error> {
+    let mut stmt = connection.prepare(
+        "SELECT log.id, log.date, release.name, artist.name FROM log JOIN release ON log.release_id = release.id JOIN artist ON release.artistname = artist.name
+        WHERE log.date BETWEEN (SELECT date('now','start of year',(?1))) AND (SELECT date('now','start of year',(?2),'-1 days'))",
+    )?;
+    let rows = stmt.query_map(
+        // sqlite jan starts at 0
+        [format!("{} month", month - 1), format!("{} month", month)],
+        |row| {
+            Ok(Log {
+                id: row.get(0)?,
+                date: row.get(1)?,
+                release: row.get(2)?,
+                artist: row.get(3)?,
+            })
+        },
+    )?;
+    let mut log: Vec<Log> = vec![];
+    for r in rows {
+        log.push(r?);
+    }
+    Ok(log)
+}
+
 pub fn get_log(connection: &Connection, id: i32) -> Result<Option<Log>, Error> {
     let mut stmt = connection.prepare("SELECT log.id, log.date, release.name, artist.name FROM log JOIN release ON log.release_id = release.id JOIN artist ON release.artistname = artist.name ORDER BY log.date AND log.id = (?1)")?;
     let mut rows = stmt.query_map([id], |row| {

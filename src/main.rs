@@ -32,9 +32,7 @@ fn open_db() -> Result<Connection, Error> {
 
 fn get_db_path() -> Result<PathBuf, Error> {
     match env::var("MLOG_DB_PATH") {
-        Ok(path) => {
-            return Ok(PathBuf::from(path))
-        },
+        Ok(path) => return Ok(PathBuf::from(path)),
         Err(_) => {}
     };
     let mut dir = match env::home_dir() {
@@ -42,23 +40,28 @@ fn get_db_path() -> Result<PathBuf, Error> {
         None => error!("Can't get home directory"),
     };
     dir.push(".config/mlog/mlog.db");
-    if let Some(parent) = dir.parent() && !parent.exists() {
-            DirBuilder::new().create(parent)?;
-        }
+    if let Some(parent) = dir.parent()
+        && !parent.exists()
+    {
+        DirBuilder::new().create(parent)?;
+    }
     Ok(dir)
 }
 
 fn upsert_tables(connection: &Connection) -> Result<(), Error> {
-    match connection.execute("CREATE TABLE IF NOT EXISTS artist(name TEXT PRIMARY KEY, WITHOUR ROWID)", []) {
-       Ok(_) => {},
-       Err(err) => error!(err.to_string()) 
+    match connection.execute(
+        "CREATE TABLE IF NOT EXISTS artist(name TEXT PRIMARY KEY, WITHOUR ROWID)",
+        [],
+    ) {
+        Ok(_) => {}
+        Err(err) => error!(err.to_string()),
     };
     match connection.execute("CREATE TABLE IF NOT EXISTS release(id INTEGER PRIMARY KEY, name TEXT NOT NULL, artistname STRING NOT NULL, year INTEGER NOT NULL, FOREIGN KEY(artistname) REFERENCES artist(name))", []) {
        Ok(_) => {},
-       Err(err) => error!(err.to_string()) 
+       Err(err) => error!(err.to_string())
     };
     match connection.execute("CREATE TABLE IF NOT EXISTS log(id INTEGER PRIMARY KEY, release_id INTEGER NOT NULL, date TEXT, FOREIGN KEY(release_id) REFERENCES release(id));", []) {
        Ok(_) => Ok(()),
-       Err(err) => error!(err.to_string()) 
+       Err(err) => error!(err.to_string())
     }
 }

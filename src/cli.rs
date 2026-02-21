@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use clap::{Parser, Subcommand, arg, command};
+use clap::{Parser, Subcommand, ValueEnum, arg, command};
 
 use crate::error::Error;
 
@@ -84,6 +84,11 @@ pub enum Commands {
         #[command(subcommand)]
         command: LogCommands,
     },
+    #[command(about = "Commands for seeing log summaries")]
+    Summary {
+        #[command(subcommand)]
+        command: SummaryCommands,
+    },
 }
 
 #[derive(Subcommand)]
@@ -130,5 +135,49 @@ pub enum LogCommands {
     Delete {
         #[arg(help = "Id of the log to delete")]
         id: i32,
+    },
+}
+
+#[derive(Debug, Clone, ValueEnum)]
+pub enum Months {
+    Jan,
+    Feb,
+    Mar,
+    Apr,
+    May,
+    Jun,
+    Jul,
+    Aug,
+    Sep,
+    Oct,
+    Nov,
+    Dec,
+}
+
+impl Months {
+    pub fn value(&self) -> i32 {
+        match self {
+            Self::Jan => 1,
+            Self::Feb => 2,
+            Self::Mar => 3,
+            Self::Apr => 4,
+            Self::May => 5,
+            Self::Jun => 6,
+            Self::Jul => 7,
+            Self::Aug => 8,
+            Self::Sep => 9,
+            Self::Oct => 10,
+            Self::Nov => 11,
+            Self::Dec => 12,
+        }
+    }
+}
+
+#[derive(Subcommand)]
+pub enum SummaryCommands {
+    #[command(about = "Summary per month")]
+    Month {
+        #[arg(value_enum, help = "The month to get a summary for")]
+        month: Months,
     },
 }
