@@ -76,6 +76,13 @@ module commands {
       musiklog log add $release
     }
   }
+
+  # Get a summary of top artist etc. for a given month
+  export def "mlog summary" [
+    month: string
+  ] {
+    musiklog summary month $month | from json
+  }
 }
 
 use commands *
