@@ -81,7 +81,13 @@ module commands {
   export def "mlog summary" [
     month: string
   ] {
-    musiklog summary month $month | from json
+    musiklog summary month $month | from json | {
+      "Total Logs": $in.totalLogs
+      "Total Artists": $in.totalArtists
+      "Unique Releases": $in.uniqueReleases
+      "Top Artist": ($in.topArtists | each {|| {"Name": $in.name "Log Count": $in.count }})
+      "Top Releases": ($in.topReleases | each {|| {"Name": $in.name "Log Count": $in.count }})
+    }
   }
 }
 
