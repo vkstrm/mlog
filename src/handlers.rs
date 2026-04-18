@@ -156,7 +156,7 @@ pub fn handle_release(command: ReleaseCommands, connection: Connection) -> Resul
         ReleaseCommands::Add { artist, name, year } => add_release(
             &connection,
             Release {
-                id: 0,
+                id: 0, // Not actually inserted
                 name,
                 artist,
                 release_year: year,
@@ -164,7 +164,9 @@ pub fn handle_release(command: ReleaseCommands, connection: Connection) -> Resul
         )?,
         ReleaseCommands::List { artist } => {
             let releases = if let Some(artist) = artist {
-                releases_for_artist(&connection, artist)?
+                let mut r = releases_for_artist(&connection, artist)?;
+                r.sort_by(|a, b| a.release_year.cmp(&b.release_year));
+                r
             } else {
                 all_releases(&connection)?
             };

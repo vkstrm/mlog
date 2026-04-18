@@ -31,10 +31,9 @@ fn open_db() -> Result<Connection, Error> {
 }
 
 fn get_db_path() -> Result<PathBuf, Error> {
-    match env::var("MLOG_DB_PATH") {
-        Ok(path) => return Ok(PathBuf::from(path)),
-        Err(_) => {}
-    };
+    if let Ok(path) = env::var("MLOG_DB_PATH") {
+        return Ok(PathBuf::from(path));
+    }
     let mut dir = match env::home_dir() {
         Some(dir) => dir,
         None => error!("Can't get home directory"),
