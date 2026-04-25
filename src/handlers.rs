@@ -31,7 +31,7 @@ pub fn handle_input(cli: Cli, connection: Connection) -> Result<(), Error> {
 pub fn handle_log(command: LogCommands, connection: Connection) -> Result<(), Error> {
     match command {
         LogCommands::Add { release, date } => {
-            let date = get_date(date);
+            let date = get_date(date)?;
             let releases = get_release(&connection, release)?;
             if releases.is_empty() {
                 error!("No such release")
@@ -215,28 +215,30 @@ where
 {
     match serde_json::to_string_pretty(&value) {
         Ok(pretty) => {
-            println!("{}", pretty)
+            println!("{}", pretty);
+            Ok(())
         }
-        Err(err) => return Err(Error::new(err.to_string())),
+        Err(err) => error!(err.to_string()),
     }
-    Ok(())
 }
 
-fn get_date(date: Option<DateInput>) -> DateTime<Local> {
+fn get_date(date: Option<DateInput>) -> Result<DateTime<Local>, Error> {
     match date {
         Some(date_input) => {
             let now = Local::now();
-            Local
-                .with_ymd_and_hms(
-                    date_input.year,
-                    date_input.month,
-                    date_input.day,
-                    now.hour(),
-                    now.minute(),
-                    now.second(),
-                )
-                .unwrap() // TODO
+            match Local.with_ymd_and_hms(
+                date_input.year,
+                date_input.month,
+                date_input.day,
+                now.hour(),
+                now.minute(),
+                now.second(),
+            ) {
+                chrono::offset::LocalResult::Single(v) => Ok(v),
+                chrono::offset::LocalResult::Ambiguous(earliest, _) => Ok(earliest),
+                chrono::offset::LocalResult::None => error!("Can't create date from input"),
+            }
         }
-        None => Local::now(),
+        None => Ok(Local::now()),
     }
 }

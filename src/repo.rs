@@ -1,9 +1,33 @@
-use rusqlite::{Connection, params};
+use rusqlite::{Connection, OptionalExtension, params};
 
 use crate::{
     error::Error,
     model::{Artist, Log, Release},
 };
+
+#[macro_export]
+macro_rules! release {
+    ($val:expr) => {
+        Ok(Release {
+            id: $val.get(0)?,
+            name: $val.get(1)?,
+            artist: $val.get(2)?,
+            release_year: $val.get(3)?,
+        })
+    };
+}
+
+#[macro_export]
+macro_rules! log {
+    ($val:expr) => {
+        Ok(Log {
+            id: $val.get(0)?,
+            date: $val.get(1)?,
+            release: $val.get(2)?,
+            artist: $val.get(3)?,
+        })
+    };
+}
 
 pub fn add_release(connection: &Connection, release: Release) -> Result<(), Error> {
     let mut stmt =
@@ -14,19 +38,8 @@ pub fn add_release(connection: &Connection, release: Release) -> Result<(), Erro
 
 pub fn get_release(connection: &Connection, release: String) -> Result<Vec<Release>, Error> {
     let mut stmt = connection.prepare("SELECT * FROM release where name = (?1)")?;
-    let rows = stmt.query_map([release], |row| {
-        Ok(Release {
-            id: row.get(0)?,
-            name: row.get(1)?,
-            artist: row.get(2)?,
-            release_year: row.get(3)?,
-        })
-    })?;
-    let mut releases: Vec<Release> = vec![];
-    for r in rows {
-        releases.push(r?);
-    }
-    Ok(releases)
+    let rows = stmt.query_map([release], |row| release!(row))?;
+    Ok(rows.into_iter().flatten().collect())
 }
 
 pub fn add_artist(connection: &Connection, artist: Artist) -> Result<(), Error> {
@@ -43,62 +56,38 @@ pub fn add_log(connection: &Connection, release_id: i32, date: String) -> Result
 
 pub fn list_log(connection: &Connection) -> Result<Vec<Log>, Error> {
     let mut stmt = connection.prepare(
-        "SELECT log.id, log.date, release.name, artist.name FROM log JOIN release ON log.release_id = release.id JOIN artist ON release.artistname = artist.name ORDER BY log.date",
+        "SELECT log.id, log.date, release.name, artist.name FROM log
+        JOIN release ON log.release_id = release.id
+        JOIN artist ON release.artistname = artist.name
+        ORDER BY log.date",
     )?;
-    let rows = stmt.query_map([], |row| {
-        Ok(Log {
-            id: row.get(0)?,
-            date: row.get(1)?,
-            release: row.get(2)?,
-            artist: row.get(3)?,
-        })
-    })?;
-    let mut log: Vec<Log> = vec![];
-    for r in rows {
-        log.push(r?);
-    }
-    Ok(log)
+    let rows = stmt.query_map([], |row| log!(row))?;
+    Ok(rows.into_iter().flatten().collect())
 }
 
 pub fn list_log_month(connection: &Connection, month: i32) -> Result<Vec<Log>, Error> {
     let mut stmt = connection.prepare(
-        "SELECT log.id, log.date, release.name, artist.name FROM log JOIN release ON log.release_id = release.id JOIN artist ON release.artistname = artist.name
+        "SELECT log.id, log.date, release.name, artist.name FROM log
+        JOIN release ON log.release_id = release.id
+        JOIN artist ON release.artistname = artist.name
         WHERE log.date BETWEEN (SELECT date('now','start of year',(?1))) AND (SELECT date('now','start of year',(?2),'-1 days'))",
     )?;
     let rows = stmt.query_map(
         // sqlite jan starts at 0
         [format!("{} month", month - 1), format!("{} month", month)],
-        |row| {
-            Ok(Log {
-                id: row.get(0)?,
-                date: row.get(1)?,
-                release: row.get(2)?,
-                artist: row.get(3)?,
-            })
-        },
+        |row| log!(row),
     )?;
-    let mut log: Vec<Log> = vec![];
-    for r in rows {
-        log.push(r?);
-    }
-    Ok(log)
+    Ok(rows.into_iter().flatten().collect())
 }
 
 pub fn get_log(connection: &Connection, id: i32) -> Result<Option<Log>, Error> {
-    let mut stmt = connection.prepare("SELECT log.id, log.date, release.name, artist.name FROM log JOIN release ON log.release_id = release.id JOIN artist ON release.artistname = artist.name ORDER BY log.date AND log.id = (?1)")?;
-    let mut rows = stmt.query_map([id], |row| {
-        Ok(Log {
-            id: row.get(0)?,
-            date: row.get(1)?,
-            release: row.get(2)?,
-            artist: row.get(3)?,
-        })
-    })?;
-    if let Some(row) = rows.next() {
-        Ok(Some(row?))
-    } else {
-        Ok(None)
-    }
+    let mut stmt = connection.prepare(
+        "SELECT log.id, log.date, release.name, artist.name FROM log
+        JOIN release ON log.release_id = release.id
+        JOIN artist ON release.artistname = artist.name
+        ORDER BY log.date AND log.id = (?1)",
+    )?;
+    Ok(stmt.query_one([id], |row| log!(row)).optional()?)
 }
 
 pub fn delete_log(connection: &Connection, id: i32) -> Result<(), Error> {
@@ -109,44 +98,18 @@ pub fn delete_log(connection: &Connection, id: i32) -> Result<(), Error> {
 
 pub fn releases_for_artist(connection: &Connection, artist: String) -> Result<Vec<Release>, Error> {
     let mut stmt = connection.prepare("SELECT * FROM release WHERE artistname = (?1)")?;
-    let rows = stmt.query_map([artist], |row| {
-        Ok(Release {
-            id: row.get(0)?,
-            name: row.get(1)?,
-            artist: row.get(2)?,
-            release_year: row.get(3)?,
-        })
-    })?;
-    let mut releases: Vec<Release> = vec![];
-    for r in rows {
-        releases.push(r?);
-    }
-    Ok(releases)
+    let rows = stmt.query_map([artist], |row| release!(row))?;
+    Ok(rows.into_iter().flatten().collect())
 }
 
 pub fn all_releases(connection: &Connection) -> Result<Vec<Release>, Error> {
     let mut stmt = connection.prepare("SELECT * FROM release")?;
-    let rows = stmt.query_map([], |row| {
-        Ok(Release {
-            id: row.get(0)?,
-            name: row.get(1)?,
-            artist: row.get(2)?,
-            release_year: row.get(3)?,
-        })
-    })?;
-    let mut releases: Vec<Release> = vec![];
-    for r in rows {
-        releases.push(r?);
-    }
-    Ok(releases)
+    let rows = stmt.query_map([], |row| release!(row))?;
+    Ok(rows.into_iter().flatten().collect())
 }
 
 pub fn artists(connection: &Connection) -> Result<Vec<Artist>, Error> {
     let mut stmt = connection.prepare("SELECT * FROM artist")?;
     let rows = stmt.query_map([], |row| Ok(Artist { name: row.get(0)? }))?;
-    let mut artists: Vec<Artist> = vec![];
-    for r in rows {
-        artists.push(r?);
-    }
-    Ok(artists)
+    Ok(rows.into_iter().flatten().collect())
 }
