@@ -179,5 +179,10 @@ pub enum SummaryCommands {
     Month {
         #[arg(value_enum, help = "The month to get a summary for")]
         month: Months,
+        #[arg(
+            long = "count",
+            help = "The number of entries to display for the top rankings."
+        )]
+        count: Option<usize>,
     },
 }

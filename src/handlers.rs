@@ -95,8 +95,8 @@ struct Summary {
 
 pub fn handle_summary(command: SummaryCommands, connection: Connection) -> Result<(), Error> {
     match command {
-        SummaryCommands::Month { month } => {
-            let display_top_count = 5;
+        SummaryCommands::Month { month, count } => {
+            let display_top_count = count.unwrap_or(5);
             let logs = list_log_month(&connection, month.value())?;
             let total_logs_count = logs.len();
 
