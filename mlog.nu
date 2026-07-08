@@ -5,7 +5,7 @@ def mlog [] {
 
 module commands {
   def completition-releases [] {
-    let releases = (musiklog release list | from json | each {|| get name })
+    let releases = (musiklog release list | from json | each {|| get name | $"\"($in)\"" })
     {
       options: {
         case_sensitive: false,
@@ -17,7 +17,7 @@ module commands {
   }
 
   def completition-artists [] {
-    let artists = (musiklog artist list | from json | each {|| get name })
+    let artists = (musiklog artist list | from json | each {|| get name | $"\"($in)\""  })
     {
       options: {
         case_sensitive: false,
