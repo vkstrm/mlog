@@ -15,7 +15,7 @@ pub struct Release {
     pub release_year: u32,
 }
 
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct Log {
     pub id: i32,

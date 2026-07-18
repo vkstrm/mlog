@@ -5,7 +5,7 @@ use crate::cli::SummaryCommands;
 use crate::error;
 use crate::repo::{
     add_artist, add_release, all_releases, artists, delete_log, get_log, list_log_month,
-    releases_for_artist,
+    logs_before_month, releases_for_artist,
 };
 use crate::{
     cli::{ArtistCommands, Cli, Commands, DateInput, LogCommands, ReleaseCommands},
@@ -48,7 +48,7 @@ pub fn handle_log(command: LogCommands, connection: Connection) -> Result<(), Er
         }
         LogCommands::List => {
             let logs = list_log(&connection)?;
-            print(&logs)?
+            output(&logs)?
         }
         LogCommands::Delete { id } => {
             if let Some(log) = get_log(&connection, id)? {
@@ -91,6 +91,8 @@ struct Summary {
     artist_top: Vec<TopEntry>,
     #[serde(rename = "topReleases")]
     release_top: Vec<TopEntry>,
+    #[serde(rename = "newReleaseCount")]
+    new_release_count: usize,
 }
 
 pub fn handle_summary(command: SummaryCommands, connection: Connection) -> Result<(), Error> {
@@ -99,6 +101,8 @@ pub fn handle_summary(command: SummaryCommands, connection: Connection) -> Resul
             let display_top_count = count.unwrap_or(5);
             let logs = list_log_month(&connection, month.value())?;
             let total_logs_count = logs.len();
+
+            let old_logs = logs_before_month(&connection, month.value())?;
 
             let mut artists: HashMap<String, Vec<String>> = HashMap::new();
             let mut releases: HashMap<String, usize> = HashMap::new();
@@ -117,6 +121,15 @@ pub fn handle_summary(command: SummaryCommands, connection: Connection) -> Resul
             let total_artist_count = artists.keys().len();
             let unique_releases_count = releases.len();
 
+            // filter older logs against this month
+            let old_releases: Vec<String> = old_logs
+                .iter()
+                .map(|log| log.release.to_string())
+                .filter(|r| releases.contains_key(r))
+                .collect();
+            let new_release_count = releases.len() - old_releases.len();
+
+            // prepare the artists for printing
             let mut artist_entries: Vec<TopEntry> = artists
                 .iter()
                 .map(|(k, v)| TopEntry {
@@ -126,10 +139,15 @@ pub fn handle_summary(command: SummaryCommands, connection: Connection) -> Resul
                 .collect();
             artist_entries.sort_by(|a, b| a.count.cmp(&b.count).reverse());
 
+            // prepare the releases for printing
             let mut release_entries: Vec<TopEntry> = releases
                 .iter()
                 .map(|(k, v)| TopEntry {
-                    name: k.to_string(),
+                    name: if !old_releases.contains(k) {
+                        format!("{} (New)", k)
+                    } else {
+                        k.to_string()
+                    },
                     count: v.to_owned(),
                 })
                 .collect();
@@ -144,8 +162,9 @@ pub fn handle_summary(command: SummaryCommands, connection: Connection) -> Resul
                     .take(display_top_count)
                     .collect(),
                 unique_releases: unique_releases_count,
+                new_release_count,
             };
-            print(&summary)?;
+            output(&summary)?;
         }
     }
     Ok(())
@@ -170,7 +189,7 @@ pub fn handle_release(command: ReleaseCommands, connection: Connection) -> Resul
             } else {
                 all_releases(&connection)?
             };
-            print(&releases)?;
+            output(&releases)?;
         }
     }
     Ok(())
@@ -181,7 +200,7 @@ pub fn handle_artist(command: ArtistCommands, connection: Connection) -> Result<
         ArtistCommands::Add { name } => add_artist(&connection, Artist { name })?,
         ArtistCommands::List => {
             let artists = artists(&connection)?;
-            print(&artists)?;
+            output(&artists)?;
         }
     }
     Ok(())
@@ -209,7 +228,7 @@ fn pick_release(releases: &[Release]) -> Result<&Release, Error> {
     }
 }
 
-fn print<T>(value: T) -> Result<(), Error>
+fn output<T>(value: T) -> Result<(), Error>
 where
     T: Serialize,
 {

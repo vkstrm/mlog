@@ -3,9 +3,16 @@ def mlog [] {
   print "Command for logging music you listened to.\n\nTry \"help mlog\""
 }
 
+def quote [input: string] {
+  if ($input | str contains " ") {
+    $"\"($input)\""
+  }
+  $input
+}
+
 module commands {
   def completition-releases [] {
-    let releases = (musiklog release list | from json | each {|| get name | $"\"($in)\"" })
+    let releases = (musiklog release list | from json | each {|| quote (get name)  })
     {
       options: {
         case_sensitive: false,
@@ -17,7 +24,7 @@ module commands {
   }
 
   def completition-artists [] {
-    let artists = (musiklog artist list | from json | each {|| get name | $"\"($in)\""  })
+    let artists = (musiklog artist list | from json | each {|| quote (get name) })
     {
       options: {
         case_sensitive: false,

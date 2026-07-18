@@ -85,7 +85,7 @@ pub fn get_log(connection: &Connection, id: i32) -> Result<Option<Log>, Error> {
         "SELECT log.id, log.date, release.name, artist.name FROM log
         JOIN release ON log.release_id = release.id
         JOIN artist ON release.artistname = artist.name
-        ORDER BY log.date AND log.id = (?1)",
+        WHERE log.id = (?1)",
     )?;
     Ok(stmt.query_one([id], |row| log!(row)).optional()?)
 }
@@ -111,5 +111,23 @@ pub fn all_releases(connection: &Connection) -> Result<Vec<Release>, Error> {
 pub fn artists(connection: &Connection) -> Result<Vec<Artist>, Error> {
     let mut stmt = connection.prepare("SELECT * FROM artist")?;
     let rows = stmt.query_map([], |row| Ok(Artist { name: row.get(0)? }))?;
+    Ok(rows.into_iter().flatten().collect())
+}
+
+// Get the logs that are older than the input month.
+// How many months of logs before this becomes a little slow?
+// Cant think of anything smarter right now
+pub fn logs_before_month(connection: &Connection, month: i32) -> Result<Vec<Log>, Error> {
+    let mut stmt = connection.prepare(
+        "SELECT log.id, log.date, release.name, artist.name FROM log
+        JOIN release ON log.release_id = release.id
+        JOIN artist ON release.artistname = artist.name
+        WHERE log.date < (SELECT date('now','start of year',(?1))) GROUP BY release.name",
+    )?;
+    let rows = stmt.query_map(
+        // sqlite jan starts at 0
+        [format!("{} month", month - 1)],
+        |row| log!(row),
+    )?;
     Ok(rows.into_iter().flatten().collect())
 }
