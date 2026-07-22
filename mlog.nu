@@ -92,6 +92,7 @@ module commands {
       "Total Logs": $in.totalLogs
       "Total Artists": $in.totalArtists
       "Unique Releases": $in.uniqueReleases
+      "New Releases": $in.newReleaseCount
       "Top Artist": ($in.topArtists | each {|| {"Name": $in.name "Log Count": $in.count }})
       "Top Releases": ($in.topReleases | each {|| {"Name": $in.name "Log Count": $in.count }})
     }
