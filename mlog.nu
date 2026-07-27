@@ -3,16 +3,17 @@ def mlog [] {
   print "Command for logging music you listened to.\n\nTry \"help mlog\""
 }
 
-def quote [input: string] {
-  if ($input | str contains " ") {
-    $"\"($input)\""
+# Quotate an autocompletion so you dont have to do it yourself
+def quotate []: string -> string {
+  if ($in | str contains " ") {
+    return $"\"($in)\""
   }
-  $input
+  $in
 }
 
 module commands {
   def completition-releases [] {
-    let releases = (musiklog release list | from json | each {|| quote (get name)  })
+    let releases = (musiklog release list | from json | each {|| $in | get name | quotate })
     {
       options: {
         case_sensitive: false,
@@ -24,7 +25,7 @@ module commands {
   }
 
   def completition-artists [] {
-    let artists = (musiklog artist list | from json | each {|| quote (get name) })
+    let artists = (musiklog artist list | from json | each {|| $in | get name | quotate })
     {
       options: {
         case_sensitive: false,
