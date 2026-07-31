@@ -2,13 +2,14 @@ use std::collections::HashMap;
 use std::io::stdin;
 
 use crate::cli::SummaryCommands;
+use crate::dateinput::{DateInput, Day, Month, Year};
 use crate::error;
 use crate::repo::{
     add_artist, add_release, all_releases, artists, delete_log, get_log, list_log_month,
     logs_before_month, releases_for_artist,
 };
 use crate::{
-    cli::{ArtistCommands, Cli, Commands, DateInput, LogCommands, ReleaseCommands},
+    cli::{ArtistCommands, Cli, Commands, LogCommands, ReleaseCommands},
     error::Error,
     model::{Artist, Release},
     repo::{add_log, get_release, list_log},
@@ -245,14 +246,10 @@ fn get_date(date: Option<DateInput>) -> Result<DateTime<Local>, Error> {
     match date {
         Some(date_input) => {
             let now = Local::now();
-            match Local.with_ymd_and_hms(
-                date_input.year,
-                date_input.month,
-                date_input.day,
-                now.hour(),
-                now.minute(),
-                now.second(),
-            ) {
+            let Year(year) = date_input.year;
+            let Month(month) = date_input.month;
+            let Day(day) = date_input.day;
+            match Local.with_ymd_and_hms(year, month, day, now.hour(), now.minute(), now.second()) {
                 chrono::offset::LocalResult::Single(v) => Ok(v),
                 chrono::offset::LocalResult::Ambiguous(earliest, _) => Ok(earliest),
                 chrono::offset::LocalResult::None => error!("Can't create date from input"),

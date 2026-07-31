@@ -1,4 +1,4 @@
-use std::fmt::Display;
+use std::{fmt::Display, num::ParseIntError};
 
 #[macro_export]
 macro_rules! error {
@@ -42,6 +42,14 @@ impl From<rusqlite::Error> for Error {
 
 impl From<std::io::Error> for Error {
     fn from(value: std::io::Error) -> Self {
+        Self {
+            message: value.to_string(),
+        }
+    }
+}
+
+impl From<ParseIntError> for Error {
+    fn from(value: ParseIntError) -> Self {
         Self {
             message: value.to_string(),
         }
