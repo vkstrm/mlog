@@ -88,12 +88,12 @@ struct Summary {
     total_artists: usize,
     #[serde(rename = "uniqueReleases")]
     unique_releases: usize,
+    #[serde(rename = "newReleaseCount")]
+    new_release_count: usize,
     #[serde(rename = "topArtists")]
     artist_top: Vec<TopEntry>,
     #[serde(rename = "topReleases")]
     release_top: Vec<TopEntry>,
-    #[serde(rename = "newReleaseCount")]
-    new_release_count: usize,
 }
 
 pub fn handle_summary(command: SummaryCommands, connection: Connection) -> Result<(), Error> {

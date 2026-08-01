@@ -70,7 +70,7 @@ pub fn list_log_month(connection: &Connection, month: i32) -> Result<Vec<Log>, E
         "SELECT log.id, log.date, release.name, artist.name FROM log
         JOIN release ON log.release_id = release.id
         JOIN artist ON release.artistname = artist.name
-        WHERE log.date BETWEEN (SELECT date('now','start of year',(?1))) AND (SELECT date('now','start of year',(?2),'-1 days'))",
+        WHERE log.date BETWEEN (SELECT date('now','start of year',(?1))) AND (SELECT date('now','start of year',(?2)))",
     )?;
     let rows = stmt.query_map(
         // sqlite jan starts at 0
