@@ -1,6 +1,6 @@
 use clap::Parser;
+use musiklog::database::basics::{solve_database_path, upsert_tables};
 use musiklog::error;
-use musiklog::files::solve_database_path;
 use musiklog::{cli::Cli, error::Error, handlers::handle_input};
 use rusqlite::Connection;
 
@@ -24,23 +24,5 @@ fn open_db() -> Result<Connection, Error> {
     match Connection::open(db_path) {
         Ok(conn) => Ok(conn),
         Err(err) => error!(err.to_string()),
-    }
-}
-
-fn upsert_tables(connection: &Connection) -> Result<(), Error> {
-    match connection.execute(
-        "CREATE TABLE IF NOT EXISTS artist(name TEXT PRIMARY KEY, WITHOUR ROWID)",
-        [],
-    ) {
-        Ok(_) => {}
-        Err(err) => error!(err.to_string()),
-    };
-    match connection.execute("CREATE TABLE IF NOT EXISTS release(id INTEGER PRIMARY KEY, name TEXT NOT NULL, artistname STRING NOT NULL, year INTEGER NOT NULL, FOREIGN KEY(artistname) REFERENCES artist(name))", []) {
-       Ok(_) => {},
-       Err(err) => error!(err.to_string())
-    };
-    match connection.execute("CREATE TABLE IF NOT EXISTS log(id INTEGER PRIMARY KEY, release_id INTEGER NOT NULL, date TEXT, FOREIGN KEY(release_id) REFERENCES release(id));", []) {
-       Ok(_) => Ok(()),
-       Err(err) => error!(err.to_string())
     }
 }

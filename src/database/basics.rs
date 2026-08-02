@@ -1,6 +1,8 @@
 use std::fs::DirBuilder;
 use std::{env, path::PathBuf};
 
+use rusqlite::Connection;
+
 use crate::error;
 use crate::error::Error;
 use crate::util::choice_yesorno;
@@ -52,4 +54,22 @@ pub fn solve_database_path() -> Result<PathBuf, Error> {
     // SQLite needs a filename
     base_dir.push("mlog.db");
     Ok(base_dir)
+}
+
+pub fn upsert_tables(connection: &Connection) -> Result<(), Error> {
+    match connection.execute(
+        "CREATE TABLE IF NOT EXISTS artist(name TEXT PRIMARY KEY, WITHOUR ROWID)",
+        [],
+    ) {
+        Ok(_) => {}
+        Err(err) => error!(err.to_string()),
+    };
+    match connection.execute("CREATE TABLE IF NOT EXISTS release(id INTEGER PRIMARY KEY, name TEXT NOT NULL, artistname STRING NOT NULL, year INTEGER NOT NULL, FOREIGN KEY(artistname) REFERENCES artist(name))", []) {
+       Ok(_) => {},
+       Err(err) => error!(err.to_string())
+    };
+    match connection.execute("CREATE TABLE IF NOT EXISTS log(id INTEGER PRIMARY KEY, release_id INTEGER NOT NULL, date TEXT, FOREIGN KEY(release_id) REFERENCES release(id));", []) {
+       Ok(_) => Ok(()),
+       Err(err) => error!(err.to_string())
+    }
 }

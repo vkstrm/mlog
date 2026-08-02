@@ -1,18 +1,17 @@
 use std::collections::HashMap;
 
 use crate::cli::SummaryCommands;
+use crate::database::operations::{
+    add_artist, add_log, add_release, all_releases, artists, delete_log, get_log, get_release,
+    list_log, list_log_month, logs_before_month, releases_for_artist,
+};
 use crate::dateinput::parse_dateinput;
 use crate::error;
-use crate::repo::{
-    add_artist, add_release, all_releases, artists, delete_log, get_log, list_log_month,
-    logs_before_month, releases_for_artist,
-};
 use crate::util::{choice, output_pretty};
 use crate::{
     cli::{ArtistCommands, Cli, Commands, LogCommands, ReleaseCommands},
     error::Error,
     model::{Artist, Release},
-    repo::{add_log, get_release, list_log},
 };
 use rusqlite::Connection;
 use serde::{Deserialize, Serialize};
