@@ -1,20 +1,19 @@
 use std::collections::HashMap;
-use std::io::stdin;
 
 use crate::cli::SummaryCommands;
-use crate::dateinput::{DateInput, Day, Month, Year};
+use crate::dateinput::parse_dateinput;
 use crate::error;
 use crate::repo::{
     add_artist, add_release, all_releases, artists, delete_log, get_log, list_log_month,
     logs_before_month, releases_for_artist,
 };
+use crate::util::{choice, output_pretty};
 use crate::{
     cli::{ArtistCommands, Cli, Commands, LogCommands, ReleaseCommands},
     error::Error,
     model::{Artist, Release},
     repo::{add_log, get_release, list_log},
 };
-use chrono::{DateTime, Local, TimeZone, Timelike};
 use rusqlite::Connection;
 use serde::{Deserialize, Serialize};
 
@@ -32,7 +31,7 @@ pub fn handle_input(cli: Cli, connection: Connection) -> Result<(), Error> {
 pub fn handle_log(command: LogCommands, connection: Connection) -> Result<(), Error> {
     match command {
         LogCommands::Add { release, date } => {
-            let date = get_date(date)?;
+            let date = parse_dateinput(date)?;
             let releases = get_release(&connection, release)?;
             if releases.is_empty() {
                 error!("No such release")
@@ -49,17 +48,16 @@ pub fn handle_log(command: LogCommands, connection: Connection) -> Result<(), Er
         }
         LogCommands::List => {
             let logs = list_log(&connection)?;
-            output(&logs)?
+            output_pretty(&logs)?
         }
         LogCommands::Delete { id } => {
             if let Some(log) = get_log(&connection, id)? {
-                eprint!(
+                let msg = format!(
                     "Really delete log?\n {}\n[y/n]: ",
                     serde_json::to_string_pretty(&log).unwrap()
                 );
-                let mut buffer = String::new();
-                stdin().read_line(&mut buffer)?;
-                if buffer.trim().to_lowercase() != "y" {
+                let choice: String = choice(&msg)?;
+                if choice.trim().to_lowercase() != "y" {
                     println!("OK, aborting delete");
                     return Ok(());
                 }
@@ -165,7 +163,7 @@ pub fn handle_summary(command: SummaryCommands, connection: Connection) -> Resul
                 unique_releases: unique_releases_count,
                 new_release_count,
             };
-            output(&summary)?;
+            output_pretty(&summary)?;
         }
     }
     Ok(())
@@ -190,7 +188,7 @@ pub fn handle_release(command: ReleaseCommands, connection: Connection) -> Resul
             } else {
                 all_releases(&connection)?
             };
-            output(&releases)?;
+            output_pretty(&releases)?;
         }
     }
     Ok(())
@@ -201,7 +199,7 @@ pub fn handle_artist(command: ArtistCommands, connection: Connection) -> Result<
         ArtistCommands::Add { name } => add_artist(&connection, Artist { name })?,
         ArtistCommands::List => {
             let artists = artists(&connection)?;
-            output(&artists)?;
+            output_pretty(&artists)?;
         }
     }
     Ok(())
@@ -213,48 +211,12 @@ fn pick_release(releases: &[Release]) -> Result<&Release, Error> {
         eprintln!("{}. {}", index, release.artist);
         index += 1;
     }
-    eprintln!("Pick a release by the number:");
-    let mut buffer = String::new();
-    stdin().read_line(&mut buffer)?;
-    let choice = match buffer.trim().parse::<usize>() {
-        Ok(choice) => choice,
-        Err(err) => error!(err.to_string()),
-    };
+    let choice: usize = choice("Pick a release by the number:")?;
     if choice < 1 || choice > releases.len() {
         error!("Invalid choice")
     }
     match releases.get(choice - 1) {
         Some(release) => Ok(release),
         None => error!("Invalid choice"),
-    }
-}
-
-fn output<T>(value: T) -> Result<(), Error>
-where
-    T: Serialize,
-{
-    match serde_json::to_string_pretty(&value) {
-        Ok(pretty) => {
-            println!("{}", pretty);
-            Ok(())
-        }
-        Err(err) => error!(err.to_string()),
-    }
-}
-
-fn get_date(date: Option<DateInput>) -> Result<DateTime<Local>, Error> {
-    match date {
-        Some(date_input) => {
-            let now = Local::now();
-            let Year(year) = date_input.year;
-            let Month(month) = date_input.month;
-            let Day(day) = date_input.day;
-            match Local.with_ymd_and_hms(year, month, day, now.hour(), now.minute(), now.second()) {
-                chrono::offset::LocalResult::Single(v) => Ok(v),
-                chrono::offset::LocalResult::Ambiguous(earliest, _) => Ok(earliest),
-                chrono::offset::LocalResult::None => error!("Can't create date from input"),
-            }
-        }
-        None => Ok(Local::now()),
     }
 }

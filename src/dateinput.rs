@@ -1,5 +1,7 @@
 use std::str::FromStr;
 
+use chrono::{DateTime, Local, TimeZone, Timelike};
+
 use crate::error;
 use crate::error::Error;
 
@@ -67,8 +69,27 @@ impl FromStr for DateInput {
     }
 }
 
+pub fn parse_dateinput(di: Option<DateInput>) -> Result<DateTime<Local>, Error> {
+    match di {
+        Some(date_input) => {
+            let now = Local::now();
+            let Year(year) = date_input.year;
+            let Month(month) = date_input.month;
+            let Day(day) = date_input.day;
+            match Local.with_ymd_and_hms(year, month, day, now.hour(), now.minute(), now.second()) {
+                chrono::offset::LocalResult::Single(v) => Ok(v),
+                chrono::offset::LocalResult::Ambiguous(earliest, _) => Ok(earliest),
+                chrono::offset::LocalResult::None => error!("Can't create date from input"),
+            }
+        }
+        None => Ok(Local::now()),
+    }
+}
+
 #[cfg(test)]
 mod tests_dateinput {
+    use chrono::Datelike;
+
     use super::*;
 
     #[test]
@@ -141,5 +162,30 @@ mod tests_dateinput {
             let x = DateInput::from_str(v);
             assert!(x.is_err())
         }
+    }
+
+    #[test]
+    fn parse_dateinput_none() {
+        let now = Local::now();
+        let parsed = parse_dateinput(None).unwrap();
+        assert!(now.minute() == parsed.minute());
+        assert!(now.hour() == parsed.hour());
+        assert!(now.day() == parsed.day());
+        assert!(now.month() == parsed.month());
+        assert!(now.year() == parsed.year());
+    }
+
+    #[test]
+    fn parse_dateinput() {
+        let expected = DateInput {
+            year: Year(2026),
+            month: Month(8),
+            day: Day(2),
+        };
+
+        let actual = parse_dateinput(Some(expected)).unwrap();
+        assert!(actual.year() == 2026);
+        assert!(actual.month() == 8);
+        assert!(actual.day() == 2);
     }
 }
