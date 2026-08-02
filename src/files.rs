@@ -41,6 +41,11 @@ pub fn solve_database_path() -> Result<PathBuf, Error> {
         );
         if choice_yesorno(&msg)? {
             DirBuilder::new().create(&base_dir)?;
+            println!("Thanks, created.");
+        } else {
+            error!(
+                "Directory not created but is required, create it yourself if that suits you better."
+            )
         }
     }
 
