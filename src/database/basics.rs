@@ -7,9 +7,17 @@ use crate::error;
 use crate::error::Error;
 use crate::util::choice_yesorno;
 
-// Get the filepath to the database location
-// This will create a directory for mlog if it doesn't exist
-pub fn solve_database_path() -> Result<PathBuf, Error> {
+// Get the connection to the database. Will solve and create the filepath
+// as best as it can.
+pub fn get_connection() -> Result<Connection, Error> {
+    let db_path = solve_database_path()?;
+    match Connection::open(db_path) {
+        Ok(conn) => Ok(conn),
+        Err(err) => error!(err.to_string()),
+    }
+}
+
+fn solve_database_path() -> Result<PathBuf, Error> {
     // Set a specific path, for testing or whatever
     if let Ok(path) = env::var("MLOG_DB_PATH") {
         return Ok(PathBuf::from(path));

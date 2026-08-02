@@ -1,7 +1,9 @@
-pub mod cli;
-pub mod database;
-mod dateinput;
 pub mod error;
-pub mod handlers;
+pub mod glue;
+
+mod cli;
+mod database;
+mod dateinput;
+mod handlers;
 mod model;
 mod util;
