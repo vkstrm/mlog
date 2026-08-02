@@ -20,6 +20,14 @@ where
     }
 }
 
+// Prints a yes or no question and returns true or false
+pub fn choice_yesorno(question: &str) -> Result<bool, Error> {
+    let mut q = question.to_string();
+    q.push_str(" [y/n]");
+    let choice: String = choice(&q)?;
+    Ok(choice.trim().to_lowercase() == "y")
+}
+
 pub fn output_pretty<T>(value: T) -> Result<(), Error>
 where
     T: Serialize,

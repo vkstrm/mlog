@@ -165,7 +165,7 @@ mod tests_dateinput {
     }
 
     #[test]
-    fn parse_dateinput_none() {
+    fn test_parse_dateinput_none() {
         let now = Local::now();
         let parsed = parse_dateinput(None).unwrap();
         assert!(now.minute() == parsed.minute());
@@ -176,7 +176,7 @@ mod tests_dateinput {
     }
 
     #[test]
-    fn parse_dateinput() {
+    fn test_parse_dateinput() {
         let expected = DateInput {
             year: Year(2026),
             month: Month(8),
