@@ -41,7 +41,7 @@ module commands {
       artist?: string@completition-artists # Only list for this artist
     ] {
     if $artist != null {
-      musiklog release list --artist $artist | from json | each {|| { name: $in.name, year: $in.year }}
+      musiklog release list --artist $artist | from json | each {|| { name: $in.name, year: $in.year, logs: $in.logs }}
     } else {
       musiklog release list | from json
     }

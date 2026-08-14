@@ -13,6 +13,7 @@ pub struct Release {
     pub artist: String,
     #[serde(rename = "year")]
     pub release_year: u32,
+    pub logs: u32,
 }
 
 #[derive(Deserialize, Serialize, Debug)]

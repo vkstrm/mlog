@@ -13,6 +13,7 @@ macro_rules! release {
             name: $val.get(1)?,
             artist: $val.get(2)?,
             release_year: $val.get(3)?,
+            logs: $val.get(4)?,
         })
     };
 }
@@ -29,16 +30,32 @@ macro_rules! log {
     };
 }
 
-pub fn add_release(connection: &Connection, release: Release) -> Result<(), Error> {
+// This is just for the database interface
+pub struct NewRelease {
+    pub name: String,
+    pub artist: String,
+    pub release_year: u32,
+}
+
+pub fn add_release(connection: &Connection, release: NewRelease) -> Result<(), Error> {
     let mut stmt =
         connection.prepare("INSERT INTO release (name, artistname, year) VALUES (?1, ?2, ?3)")?;
     stmt.execute(params![release.name, release.artist, release.release_year])?;
     Ok(())
 }
 
-pub fn get_release(connection: &Connection, release: String) -> Result<Vec<Release>, Error> {
-    let mut stmt = connection.prepare("SELECT * FROM release where name = (?1)")?;
-    let rows = stmt.query_map([release], |row| release!(row))?;
+pub fn get_release(connection: &Connection, release_name: String) -> Result<Vec<Release>, Error> {
+    let mut stmt = connection.prepare("SELECT * FROM release WHERE name = (?1)")?;
+    let rows = stmt.query_map([release_name], |row| {
+        // The macro isn't used here because the logs count isn't used where this release is used.
+        Ok(Release {
+            id: row.get(0)?,
+            name: row.get(1)?,
+            artist: row.get(2)?,
+            release_year: row.get(3)?,
+            logs: 0,
+        })
+    })?;
     Ok(rows.into_iter().flatten().collect())
 }
 
@@ -97,13 +114,24 @@ pub fn delete_log(connection: &Connection, id: i32) -> Result<(), Error> {
 }
 
 pub fn releases_for_artist(connection: &Connection, artist: String) -> Result<Vec<Release>, Error> {
-    let mut stmt = connection.prepare("SELECT * FROM release WHERE artistname = (?1)")?;
+    let mut stmt = connection.prepare(
+        "SELECT release.id, release.name, release.artistname, release.year, COUNT(log.release_id) as count
+        FROM release
+        JOIN log ON log.release_id = release.id
+        WHERE release.artistname = (?1)
+        GROUP BY release.id"
+    )?;
     let rows = stmt.query_map([artist], |row| release!(row))?;
     Ok(rows.into_iter().flatten().collect())
 }
 
 pub fn all_releases(connection: &Connection) -> Result<Vec<Release>, Error> {
-    let mut stmt = connection.prepare("SELECT * FROM release")?;
+    let mut stmt = connection.prepare(
+        "SELECT release.id, release.name, release.artistname, release.year, COUNT(log.release_id) as count
+        FROM release
+        JOIN log ON log.release_id = release.id
+        GROUP BY release.id"
+    )?;
     let rows = stmt.query_map([], |row| release!(row))?;
     Ok(rows.into_iter().flatten().collect())
 }

@@ -2,8 +2,8 @@ use std::collections::HashMap;
 
 use crate::cli::SummaryCommands;
 use crate::database::operations::{
-    add_artist, add_log, add_release, all_releases, artists, delete_log, get_log, get_release,
-    list_log, list_log_month, logs_before_month, releases_for_artist,
+    NewRelease, add_artist, add_log, add_release, all_releases, artists, delete_log, get_log,
+    get_release, list_log, list_log_month, logs_before_month, releases_for_artist,
 };
 use crate::dateinput::parse_dateinput;
 use crate::error;
@@ -172,8 +172,7 @@ pub fn handle_release(command: ReleaseCommands, connection: Connection) -> Resul
     match command {
         ReleaseCommands::Add { artist, name, year } => add_release(
             &connection,
-            Release {
-                id: 0, // Not actually inserted
+            NewRelease {
                 name,
                 artist,
                 release_year: year,
