@@ -48,6 +48,8 @@ pub enum ReleaseCommands {
     List {
         #[arg(help = "List releases for this artist", long = "artist")]
         artist: Option<String>,
+        #[arg(help = "Filter by release year", long = "year")]
+        release_year: Option<u32>,
     },
 }
 

@@ -178,13 +178,26 @@ pub fn handle_release(command: ReleaseCommands, connection: Connection) -> Resul
                 release_year: year,
             },
         )?,
-        ReleaseCommands::List { artist } => {
+        ReleaseCommands::List {
+            artist,
+            release_year,
+        } => {
             let releases = if let Some(artist) = artist {
                 let mut r = releases_for_artist(&connection, artist)?;
                 r.sort_by(|a, b| a.release_year.cmp(&b.release_year));
                 r
             } else {
                 all_releases(&connection)?
+            };
+            let releases = if let Some(year) = release_year {
+                let mut r: Vec<Release> = releases
+                    .into_iter()
+                    .filter(|x| x.release_year == year)
+                    .collect();
+                r.sort_by(|a, b| (b.logs).cmp(&a.logs));
+                r
+            } else {
+                releases
             };
             output_pretty(&releases)?;
         }

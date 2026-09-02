@@ -36,14 +36,23 @@ module commands {
     }
   }
 
-  # List all releases or for a certain artist
+  # List releases
   export def "mlog release" [
-      artist?: string@completition-artists # Only list for this artist
+      --artist: string@completition-artists # See releases for some artist
+      --year: int # See releases for a release year
     ] {
+    mut args = []
     if $artist != null {
-      musiklog release list --artist $artist | from json | each {|| { name: $in.name, year: $in.year, logs: $in.logs }}
+      $args = $args | append ["--artist", $artist]
+    }
+    if $year != null {
+      $args = $args | append ["--year", $year]
+    }
+    let res = musiklog release list ...$args | from json
+    if $artist != null {
+      $res | each {|| { name: $in.name, year: $in.year, logs: $in.logs }}
     } else {
-      musiklog release list | from json
+      $res
     }
   }
 
