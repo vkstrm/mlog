@@ -1,8 +1,9 @@
 use rusqlite::{Connection, OptionalExtension, params};
 
 use crate::{
+    cli::ArtistOrdering,
     error::Error,
-    model::{Artist, Log, Release},
+    model::{Artist, Log, OutputArtist, Release},
 };
 
 #[macro_export]
@@ -115,7 +116,7 @@ pub fn delete_log(connection: &Connection, id: i32) -> Result<(), Error> {
 
 pub fn releases_for_artist(connection: &Connection, artist: String) -> Result<Vec<Release>, Error> {
     let mut stmt = connection.prepare(
-        "SELECT release.id, release.name, release.artistname, release.year, COUNT(log.release_id) as count
+        "SELECT release.id, release.name, release.artistname, release.year, COUNT(log.release_id) AS count
         FROM release
         JOIN log ON log.release_id = release.id
         WHERE release.artistname = (?1)
@@ -127,7 +128,7 @@ pub fn releases_for_artist(connection: &Connection, artist: String) -> Result<Ve
 
 pub fn all_releases(connection: &Connection) -> Result<Vec<Release>, Error> {
     let mut stmt = connection.prepare(
-        "SELECT release.id, release.name, release.artistname, release.year, COUNT(log.release_id) as count
+        "SELECT release.id, release.name, release.artistname, release.year, COUNT(log.release_id) AS count
         FROM release
         JOIN log ON log.release_id = release.id
         GROUP BY release.id"
@@ -136,9 +137,33 @@ pub fn all_releases(connection: &Connection) -> Result<Vec<Release>, Error> {
     Ok(rows.into_iter().flatten().collect())
 }
 
-pub fn artists(connection: &Connection) -> Result<Vec<Artist>, Error> {
-    let mut stmt = connection.prepare("SELECT * FROM artist")?;
-    let rows = stmt.query_map([], |row| Ok(Artist { name: row.get(0)? }))?;
+pub fn artists(
+    connection: &Connection,
+    ordering: Option<ArtistOrdering>,
+) -> Result<Vec<OutputArtist>, Error> {
+    let mut stmt_str = "SELECT artist.name, COUNT(release.artistname) AS releases,
+        (SELECT COUNT(*) FROM log LEFT JOIN release ON release.id = log.release_id WHERE release.artistname = artist.name) AS logs
+        FROM artist
+        JOIN release ON release.artistname = artist.name
+        GROUP BY artist.name"
+        .to_string();
+
+    if let Some(order) = ordering {
+        let order_str = match order {
+            ArtistOrdering::Releases => " ORDER BY releases DESC",
+            ArtistOrdering::Logs => " ORDER BY logs DESC",
+        };
+        stmt_str.push_str(order_str);
+    }
+
+    let mut stmt = connection.prepare(&stmt_str)?;
+    let rows = stmt.query_map([], |row| {
+        Ok(OutputArtist {
+            name: row.get(0)?,
+            releases: row.get(1)?,
+            logs: row.get(2)?,
+        })
+    })?;
     Ok(rows.into_iter().flatten().collect())
 }
 

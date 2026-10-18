@@ -208,8 +208,8 @@ pub fn handle_release(command: ReleaseCommands, connection: Connection) -> Resul
 pub fn handle_artist(command: ArtistCommands, connection: Connection) -> Result<(), Error> {
     match command {
         ArtistCommands::Add { name } => add_artist(&connection, Artist { name })?,
-        ArtistCommands::List => {
-            let artists = artists(&connection)?;
+        ArtistCommands::List { order_by } => {
+            let artists = artists(&connection, order_by)?;
             output_pretty(&artists)?;
         }
     }

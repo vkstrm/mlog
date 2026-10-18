@@ -6,6 +6,13 @@ pub struct Artist {
 }
 
 #[derive(Deserialize, Serialize)]
+pub struct OutputArtist {
+    pub name: String,
+    pub releases: i32,
+    pub logs: i32,
+}
+
+#[derive(Deserialize, Serialize)]
 pub struct Release {
     #[serde(skip)]
     pub id: i32,

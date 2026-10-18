@@ -53,6 +53,12 @@ pub enum ReleaseCommands {
     },
 }
 
+#[derive(Debug, Clone, ValueEnum)]
+pub enum ArtistOrdering {
+    Releases,
+    Logs,
+}
+
 #[derive(Subcommand)]
 pub enum ArtistCommands {
     #[command(about = "Register a new artist")]
@@ -61,7 +67,13 @@ pub enum ArtistCommands {
         name: String,
     },
     #[command(about = "List all artists")]
-    List,
+    List {
+        #[arg(
+            help = "How to order the result. The default is by added order.",
+            long = "order-by"
+        )]
+        order_by: Option<ArtistOrdering>,
+    },
 }
 
 #[derive(Subcommand)]

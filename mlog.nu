@@ -65,9 +65,19 @@ module commands {
     musiklog release add $artist $name $year
   }
 
+  # Just for completion
+  def artist-order-by [] {
+    ["releases", "logs"]
+  }
   # List all artists
-  export def "mlog artist" [] {
-    musiklog artist list | from json
+  export def "mlog artist" [
+    --order-by: string@artist-order-by # Order by releases or logs
+  ] {
+    if $order_by != null {
+      musiklog artist list --order-by $order_by | from json
+    } else {
+      musiklog artist list | from json
+    }
   }
 
   # Add new artist
